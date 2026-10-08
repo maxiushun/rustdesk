@@ -25,20 +25,19 @@ jobs:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
 
-      - name: 克隆官方稳定版vcpkg
+      - name: 克隆匹配版本的vcpkg
         run: |
-          # 删除自带残缺版，避免冲突
+          # 移除自带残缺版
           Remove-Item -Recurse -Force C:\vcpkg -ErrorAction SilentlyContinue
-          # 克隆和官方正式版一致的vcpkg版本
-          git clone --depth 1 --branch 2024.02.14 https://github.com/microsoft/vcpkg.git C:\vcpkg
+          # 克隆2024.09.27稳定版，支持ffnvcodec 12.x
+          git clone --depth 1 --branch 2024.09.27 https://github.com/microsoft/vcpkg.git C:\vcpkg
           # 初始化生成vcpkg.exe
           cd C:\vcpkg
           .\bootstrap-vcpkg.bat -disableMetrics
-          # 全局写入环境变量
           echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
-      - name: 自动安装全部依赖（读取项目vcpkg.json）
-        run: C:\vcpkg\vcpkg.exe install --triplet x64-windows-static
+      - name: 自动安装全部依赖
+        run: C:\vcpkg\vcpkg.exe install --triplet x64-windows-static --no-baseline
         working-directory: ${{ github.workspace }}
 
       - name: 安装 Flutter SDK（匹配官方版本）
