@@ -25,14 +25,11 @@ jobs:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
 
-      - name: 克隆匹配版本的vcpkg
+      - name: 更新vcpkg版本数据库
         run: |
-          # 移除自带残缺版
-          Remove-Item -Recurse -Force C:\vcpkg -ErrorAction SilentlyContinue
-          # 克隆2024.09.27稳定版，支持ffnvcodec 12.x
-          git clone --depth 1 --branch 2024.09.27 https://github.com/microsoft/vcpkg.git C:\vcpkg
-          # 初始化生成vcpkg.exe
           cd C:\vcpkg
+          # 刷新版本库，支持最新ffnvcodec 12.x
+          git pull
           .\bootstrap-vcpkg.bat -disableMetrics
           echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
