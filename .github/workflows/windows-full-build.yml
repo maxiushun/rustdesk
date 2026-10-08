@@ -25,21 +25,12 @@ jobs:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
 
-      - name: 初始化 vcpkg 并缓存依赖
-        uses: actions/cache@v4
-        id: vcpkg-cache
-        with:
-          path: C:\vcpkg\installed
-          key: vcpkg-x64-windows-static-${{ hashFiles('vcpkg.json') }}
-
-      - name: 安装 vcpkg 依赖
-        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+      - name: 加载官方预编译vcpkg依赖
         run: |
-          cd C:\vcpkg
-          git checkout 2024.02.14
-          .\bootstrap-vcpkg.bat -disableMetrics
-          .\vcpkg.exe install --triplet x64-windows-static
-        working-directory: ${{ github.workspace }}
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "https://github.com/rustdesk/rustdesk/releases/download/1.5.0/vcpkg_x64-windows-static.zip" -OutFile "vcpkg_deps.zip"
+          Expand-Archive -Path "vcpkg_deps.zip" -DestinationPath "C:\" -Force
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
       - name: 安装 Flutter SDK（匹配官方版本）
         uses: subosito/flutter-action@v2
