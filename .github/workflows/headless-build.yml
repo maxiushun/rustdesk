@@ -17,8 +17,14 @@ jobs:
       - name: 配置 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
 
+      - name: 初始化 vcpkg 环境
+        run: |
+          cd C:\vcpkg
+          .\bootstrap-vcpkg.bat -disableMetrics
+
       - name: 安装被控端依赖
-        run: vcpkg install libvpx libyuv opus
+        run: |
+          C:\vcpkg\vcpkg.exe install --triplet x64-windows-static libvpx libyuv opus
 
       - name: 编译纯被控端
         run: cargo build --release --features headless
