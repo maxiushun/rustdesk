@@ -7,6 +7,7 @@ jobs:
     runs-on: windows-2022
     env:
       VCPKG_DEFAULT_TRIPLET: x64-windows-static
+      VCPKG_DISABLE_BASELINE_CHECK: true  # 禁用基线校验，替代--no-baseline，兼容旧版vcpkg
       RUST_BACKTRACE: full
     steps:
       - name: 拉取完整源码
@@ -25,16 +26,16 @@ jobs:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
 
-      - name: 更新vcpkg版本数据库
+      - name: 更新vcpkg版本库
         run: |
           cd C:\vcpkg
-          # 刷新版本库，支持最新ffnvcodec 12.x
+          # 拉取最新版本库，支持ffnvcodec 12.x
           git pull
           .\bootstrap-vcpkg.bat -disableMetrics
           echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
-      - name: 自动安装全部依赖
-        run: C:\vcpkg\vcpkg.exe install --triplet x64-windows-static --no-baseline
+      - name: 自动安装全部依赖（读取项目vcpkg.json）
+        run: C:\vcpkg\vcpkg.exe install --triplet x64-windows-static
         working-directory: ${{ github.workspace }}
 
       - name: 安装 Flutter SDK（匹配官方版本）
