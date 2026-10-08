@@ -5,11 +5,8 @@ on:
 jobs:
   build-windows-headless:
     runs-on: windows-latest
-    env:
-      VCPKG_ROOT: C:\vcpkg
-      VCPKG_DEFAULT_TRIPLET: x64-windows-static
     steps:
-      - name: 拉取源码
+      - name: 拉取完整源码
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -17,14 +14,13 @@ jobs:
       - name: 配置 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
 
-      - name: 初始化 vcpkg 环境
+      - name: 加载官方预编译依赖
         run: |
-          cd C:\vcpkg
-          .\bootstrap-vcpkg.bat -disableMetrics
-
-      - name: 安装被控端依赖
-        run: |
-          C:\vcpkg\vcpkg.exe install --triplet x64-windows-static libvpx libyuv opus
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "https://github.com/rustdesk/rustdesk/releases/download/nightly/vcpkg_x64-windows-static.zip" -OutFile "vcpkg_deps.zip"
+          Expand-Archive -Path "vcpkg_deps.zip" -DestinationPath "C:\" -Force
+          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+          echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $env:GITHUB_ENV
 
       - name: 编译纯被控端
         run: cargo build --release --features headless
