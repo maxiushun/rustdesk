@@ -1,0 +1,74 @@
+name: Windows 完整版客户端
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows-full:
+    runs-on: windows-2022
+    env:
+      VCPKG_DEFAULT_TRIPLET: x64-windows-static
+      RUST_BACKTRACE: full
+    steps:
+      - name: 拉取完整源码
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: 配置 MSVC 构建环境
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: 配置 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - name: 初始化 vcpkg 并缓存依赖
+        uses: actions/cache@v4
+        id: vcpkg-cache
+        with:
+          path: C:\vcpkg\installed
+          key: vcpkg-x64-windows-static-${{ hashFiles('vcpkg.json') }}
+
+      - name: 安装 vcpkg 依赖
+        if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+        run: |
+          cd C:\vcpkg
+          git checkout 2024.02.14
+          .\bootstrap-vcpkg.bat -disableMetrics
+          .\vcpkg.exe install --triplet x64-windows-static
+        working-directory: ${{ github.workspace }}
+
+      - name: 安装 Flutter SDK（匹配官方版本）
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: 'stable'
+          architecture: x64
+
+      - name: 启用 Windows 桌面构建
+        run: |
+          flutter config --enable-windows-desktop
+          flutter doctor
+
+      - name: 构建 Rust 核心库
+        run: cargo build --release
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
+          RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
+          API_SERVER: ${{ secrets.API_SERVER }}
+
+      - name: 构建 Flutter 前端并打包
+        run: |
+          cd flutter
+          flutter build windows --release
+          copy ..\target\release\rustdesk.exe build\windows\runner\Release\
+
+      - name: 上传编译产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-完整版-windows-x64
+          path: flutter/build/windows/runner/Release/rustdesk.exe
