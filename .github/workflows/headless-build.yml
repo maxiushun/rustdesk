@@ -6,6 +6,7 @@ jobs:
   build-windows-headless:
     runs-on: windows-latest
     env:
+      VCPKG_ROOT: C:\vcpkg
       VCPKG_DEFAULT_TRIPLET: x64-windows-static
     steps:
       - name: 拉取源码
@@ -15,11 +16,9 @@ jobs:
 
       - name: 配置 Rust 工具链
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
 
-      - name: 自动配置 vcpkg 依赖
-        uses: microsoft/setup-vcpkg@v1
+      - name: 安装被控端依赖
+        run: vcpkg install libvpx libyuv opus
 
       - name: 编译纯被控端
         run: cargo build --release --features headless
@@ -27,7 +26,7 @@ jobs:
           RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
           RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
 
-      - name: 上传产物
+      - name: 上传编译产物
         uses: actions/upload-artifact@v4
         with:
           name: rustdesk-被控端-windows-x64
