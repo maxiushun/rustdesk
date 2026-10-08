@@ -25,12 +25,21 @@ jobs:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
 
-      - name: 加载官方预编译vcpkg依赖
+      - name: 克隆官方稳定版vcpkg
         run: |
-          $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri "https://github.com/rustdesk/rustdesk/releases/download/1.5.0/vcpkg_x64-windows-static.zip" -OutFile "vcpkg_deps.zip"
-          Expand-Archive -Path "vcpkg_deps.zip" -DestinationPath "C:\" -Force
+          # 删除自带残缺版，避免冲突
+          Remove-Item -Recurse -Force C:\vcpkg -ErrorAction SilentlyContinue
+          # 克隆和官方正式版一致的vcpkg版本
+          git clone --depth 1 --branch 2024.02.14 https://github.com/microsoft/vcpkg.git C:\vcpkg
+          # 初始化生成vcpkg.exe
+          cd C:\vcpkg
+          .\bootstrap-vcpkg.bat -disableMetrics
+          # 全局写入环境变量
           echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
+
+      - name: 自动安装全部依赖（读取项目vcpkg.json）
+        run: C:\vcpkg\vcpkg.exe install --triplet x64-windows-static
+        working-directory: ${{ github.workspace }}
 
       - name: 安装 Flutter SDK（匹配官方版本）
         uses: subosito/flutter-action@v2
