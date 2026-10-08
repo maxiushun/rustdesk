@@ -6,9 +6,13 @@ jobs:
   build-windows-full:
     runs-on: windows-2022
     env:
+      # vcpkg 全局配置
       VCPKG_DEFAULT_TRIPLET: x64-windows-static
-      VCPKG_DISABLE_BASELINE_CHECK: true  # 禁用基线校验，替代--no-baseline，兼容旧版vcpkg
+      VCPKG_DISABLE_BASELINE_CHECK: true
+      # Rust 构建配置
       RUST_BACKTRACE: full
+      CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG: true
+
     steps:
       - name: 拉取完整源码
         uses: actions/checkout@v4
@@ -26,15 +30,17 @@ jobs:
           toolchain: stable-x86_64-pc-windows-msvc
           components: rustfmt, clippy
 
-      - name: 更新vcpkg版本库
+      - name: 更新 vcpkg 版本库
         run: |
           cd C:\vcpkg
-          # 拉取最新版本库，支持ffnvcodec 12.x
+          # 刷新包索引，支持 ffnvcodec 12.x 等最新依赖
           git pull
+          # 重新生成 vcpkg.exe
           .\bootstrap-vcpkg.bat -disableMetrics
+          # 写入全局环境变量
           echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
 
-      - name: 自动安装全部依赖（读取项目vcpkg.json）
+      - name: 自动安装全部依赖（读取项目 vcpkg.json）
         run: C:\vcpkg\vcpkg.exe install --triplet x64-windows-static
         working-directory: ${{ github.workspace }}
 
@@ -54,6 +60,10 @@ jobs:
         run: cargo build --release
         env:
           VCPKG_ROOT: C:\vcpkg
+          VCPKGRS_TRIPLET: x64-windows-static
+          VCPKGRS_DYNAMIC: 0
+          # 显式补充静态库搜索路径，解决 magnum-opus 等库链接失败
+          RUSTFLAGS: "-L C:\\vcpkg\\installed\\x64-windows-static\\lib"
           RS_PUB_KEY: ${{ secrets.RS_PUB_KEY }}
           RENDEZVOUS_SERVER: ${{ secrets.RENDEZVOUS_SERVER }}
           API_SERVER: ${{ secrets.API_SERVER }}
